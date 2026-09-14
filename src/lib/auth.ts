@@ -1,12 +1,11 @@
 import { cookies } from 'next/headers';
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { envObligatorio } from './env';
 
 const COOKIE = 'multas_sesion';
 
 function secreto(): string {
-  const s = process.env.CLAVE_GRUPO;
-  if (!s) throw new Error('Falta la variable de entorno CLAVE_GRUPO');
-  return s;
+  return envObligatorio('CLAVE_GRUPO');
 }
 
 function firmar(valor: string): string {

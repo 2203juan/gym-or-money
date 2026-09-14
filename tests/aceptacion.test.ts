@@ -147,6 +147,39 @@ describe('criterios de aceptacion', () => {
   });
 });
 
+describe('nombres repetidos', () => {
+  it('dos lineas de la misma persona se reportan como tal, NO como "ya procesada"', async () => {
+    const texto = 'Semana # 32\n\nNaranjo: 4/4 \u2705\nHoyos: 2/3\nJuan J: 2/3';
+    const a = await analizarMensaje(texto);
+    expect(a.yaProcesada).toBe(false);
+    expect(a.advertencias.join(' ')).toMatch(/misma persona/i);
+
+    const r = await registrarSemana(texto, 'Juan');
+    expect(r.ok).toBe(false);
+    if (!r.ok) {
+      expect(r.motivo).toBe('errores');           // <- antes decia 'ya_procesada'
+      expect(r.detalle).toMatch(/misma persona/i);
+      expect(r.detalle).toMatch(/Hoyos/);
+    }
+    // Y no deja basura a medias
+    expect((await q<any>('select count(*)::int as n from multas.semanas'))[0].n).toBe(0);
+    expect((await q<any>('select count(*)::int as n from multas.multas'))[0].n).toBe(0);
+  });
+
+  it('el mismo nombre escrito dos veces tambien se detecta', async () => {
+    const r = await registrarSemana('Semana 50\n\nBetan: 1/3\nBetan: 3/3 \u2705', 'Juan');
+    expect(r.ok).toBe(false);
+    if (!r.ok) expect(r.motivo).toBe('errores');
+  });
+
+  it('"ya procesada" sigue reservado para una semana realmente registrada', async () => {
+    await registrarSemana(SEMANA_32, 'Juan');
+    const otra = await registrarSemana(SEMANA_32, 'Lucho');
+    expect(otra.ok).toBe(false);
+    if (!otra.ok) expect(otra.motivo).toBe('ya_procesada');
+  });
+});
+
 describe('extras', () => {
   it('el saldo inicial migrado aparece como movimiento explicito', async () => {
     const p = (await listarPersonas()).find((x) => x.nombre === 'Will')!;

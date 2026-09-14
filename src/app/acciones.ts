@@ -9,6 +9,7 @@ import {
 } from '@/lib/dominio';
 import { q, pool, bitacora } from '@/lib/db';
 import { enviarMensaje, resumenSemana } from '@/lib/telegram';
+import { env } from '@/lib/env';
 
 export type Estado = { error?: string; ok?: string } | null;
 
@@ -48,8 +49,8 @@ export async function confirmarSemana(_prev: Estado, form: FormData): Promise<Es
   }
 
   // Publicar en el grupo de Telegram el detalle de lo que se acaba de registrar
-  const chat = process.env.TELEGRAM_CHAT_ID;
-  if (chat && process.env.TELEGRAM_BOT_TOKEN) {
+  const chat = env('TELEGRAM_CHAT_ID');
+  if (chat && env('TELEGRAM_BOT_TOKEN')) {
     try {
       const s = (await saldos()).map((x) => ({ nombre: x.nombre, saldo: x.saldo }));
       await enviarMensaje(chat, resumenSemana(r.analisis, s));

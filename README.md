@@ -56,12 +56,16 @@ vercel --prod     # o el servicio que prefieras
 
 ### 4. Registrar el webhook de Telegram
 
+Hay un script que lee el token y el secreto del `.env`, asi que no hay que copiarlos a ningun lado:
+
 ```bash
-curl -F "url=https://TU-APP.vercel.app/api/telegram" \
-     -F "secret_token=TU_TELEGRAM_WEBHOOK_SECRET" \
-     -F "drop_pending_updates=true" \
-     "https://api.telegram.org/botTU_TOKEN/setWebhook"
+node scripts/webhook.mjs        # ver el estado actual y un diagnostico
+node scripts/webhook.mjs set    # registrar el webhook
+node scripts/webhook.mjs delete # quitarlo
 ```
+
+Importante: **un bot solo puede tener un webhook**. Registrar el tuyo reemplaza cualquier
+otro que ese mismo bot tuviera (por ejemplo, un Google Apps Script anterior).
 
 Añade el bot al grupo. Si quieres que lea todos los mensajes (no solo los que lo mencionan),
 desactiva el *privacy mode* en BotFather: `/setprivacy` → Disable.

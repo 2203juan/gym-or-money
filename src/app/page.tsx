@@ -4,70 +4,97 @@ import { usuarioActual } from '@/lib/auth';
 import { saldos } from '@/lib/dominio';
 import { q } from '@/lib/db';
 import { formatoCOP } from '@/lib/multas';
+import { barajarConSemilla } from '@/lib/orden';
 import { salir } from './acciones';
 
 export const dynamic = 'force-dynamic';
 
-export default async function Tablero() {
+type UltimaMulta = { persona_id: number; dias: number; meta: number; estado: string };
+
+export default async function Saldos() {
   const usuario = await usuarioActual();
   if (!usuario) redirect('/login');
 
   const lista = await saldos();
-  const bote = lista.reduce((s, p) => s + p.saldo, 0); // neto, igual que el total de Splitwise
-  const max = Math.max(1, ...lista.map((p) => Math.max(p.saldo, 0)));
-  const pend = await q<{ n: number }>(
-    'select count(*)::int as n from multas.pendientes_mapeo where resuelto = false');
-  const receptor = await q<{ nombre: string }>(
-    'select nombre from multas.personas where es_receptor = true limit 1');
+  const acumulado = lista.reduce((s, p) => s + p.saldo, 0);
+
+  const [ultima] = await q<{ numero: number; fecha: string }>(
+    `select numero, to_char(fecha_cierre,'DD Mon YYYY') as fecha
+     from multas.semanas where estado='procesada' order by numero desc limit 1`,
+  );
+  const semana = ultima?.numero ?? 0;
+
+  // Marcador de cada quien en la ultima semana viva
+  const marcadores = await q<UltimaMulta>(
+    `select m.persona_id, m.dias_cumplidos as dias, m.meta, m.estado
+     from multas.multas m join multas.semanas s on s.id = m.semana_id
+     where s.numero = $1 and s.estado = 'procesada'`,
+    [semana],
+  );
+  const porPersona = new Map(marcadores.map((m) => [Number(m.persona_id), m]));
+
+  const pendientes = await q<{ n: number }>(
+    'select count(*)::int as n from multas.pendientes_mapeo where resuelto = false',
+  );
+
+  // Orden barajado, estable durante toda la semana
+  const orden = barajarConSemilla(lista, semana || 1);
 
   return (
     <>
-      <div className="row" style={{ marginBottom: 14 }}>
-        <div className="grow">
-          <h1>Ejercicio o Money</h1>
-          <p className="sub" style={{ margin: 0 }}>Hola, {usuario}.</p>
-        </div>
-        <form action={salir}><button className="ghost small">Salir</button></form>
-      </div>
+      <header className="barra">
+        <span>Ejercicio o Money</span>
+        <form action={salir}>
+          <button className="barra__salir" type="submit">Salir · {usuario}</button>
+        </form>
+      </header>
 
-      <div className="bote">
-        <div className="l">El bote</div>
-        <div className="n">{formatoCOP(bote)}</div>
-        <div className="muted" style={{ marginTop: 4 }}>
-          Total que el grupo le debe a {receptor[0]?.nombre ?? 'el bote'}
-        </div>
-      </div>
+      <section className="total">
+        <p className="total__etiqueta">Acumulado</p>
+        <p className="total__cifra">{formatoCOP(acumulado)}</p>
+        <p className="total__pie">
+          <span className="marca">{lista.length} personas</span>
+          <span>{semana ? `Semana ${semana} · ${ultima.fecha}` : 'Sin semanas registradas'}</span>
+        </p>
+      </section>
 
-      {pend[0]?.n ? (
-        <div className="alert warn">
-          Hay {pend[0].n} nombre(s) sin mapear. <Link href="/config">Resolver en Ajustes →</Link>
+      {pendientes[0]?.n ? (
+        <div className="aviso aviso--ojo" style={{ marginTop: 14 }}>
+          Hay {pendientes[0].n} nombre(s) sin mapear. <Link href="/config">Resolver en ajustes</Link>
         </div>
       ) : null}
 
-      <h2>Saldos</h2>
-      {lista.map((p) => (
-        <div key={p.id} className="card">
-          <Link href={`/persona/${p.id}`}>
-            <div className="row">
-              <div className="grow">
-                <div className="name" style={{ color: 'var(--tx)' }}>{p.nombre}</div>
-                <div className="muted">
-                  {p.saldo_inicial !== 0 ? <>inicial {formatoCOP(p.saldo_inicial)} · </> : null}
-                  multas {formatoCOP(p.total_multas)} · abonos {formatoCOP(p.total_abonos)}
-                </div>
-              </div>
-              <div className={'amount ' + (p.saldo > 0 ? 'pos' : 'zero')}>
+      <div className="filas">
+        {orden.map((p) => {
+          const m = porPersona.get(Number(p.id));
+          const sub =
+            p.saldo < 0 ? 'Saldo a favor'
+            : m && m.estado === 'exenta' ? `${m.dias}/${m.meta} · exento por excusa`
+            : m ? `${m.dias}/${m.meta} esta semana`
+            : 'Sin registro esta semana';
+          return (
+            <Link key={p.id} href={`/persona/${p.id}`} className="fila">
+              <span>
+                <span className="fila__nombre">{p.nombre}</span>
+                <span className="fila__sub">{sub}</span>
+              </span>
+              <span
+                className={
+                  'fila__monto' +
+                  (p.saldo < 0 ? ' fila__monto--credito' : p.saldo === 0 ? ' fila__monto--cero' : '')
+                }
+              >
                 {formatoCOP(p.saldo)}
-                {p.saldo < 0 ? <div className="muted" style={{ fontWeight: 400 }}>a favor</div> : null}
-              </div>
-            </div>
-          </Link>
-          <div className="bar"><i style={{ width: `${(Math.max(p.saldo, 0) / max) * 100}%` }} /></div>
-        </div>
-      ))}
+              </span>
+            </Link>
+          );
+        })}
+        {orden.length === 0 ? <p className="vacio">Todavía no hay personas cargadas.</p> : null}
+      </div>
 
-      <p className="muted" style={{ marginTop: 20 }}>
-        <Link href="/config">Ajustes: saldos iniciales y alias →</Link>
+      <p className="nota">
+        El orden se baraja al cerrar cada semana, igual para todos. Toca un nombre para ver sus
+        movimientos. <Link href="/config" style={{ textDecoration: 'underline' }}>Ajustes</Link>
       </p>
     </>
   );

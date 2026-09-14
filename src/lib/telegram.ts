@@ -1,12 +1,11 @@
 import { formatoCOP } from './multas';
+import { env, envObligatorio } from './env';
 import type { Analisis } from './dominio';
 
 const API = 'https://api.telegram.org/bot';
 
 export function tokenBot(): string {
-  const t = process.env.TELEGRAM_BOT_TOKEN;
-  if (!t) throw new Error('Falta TELEGRAM_BOT_TOKEN');
-  return t;
+  return envObligatorio('TELEGRAM_BOT_TOKEN');
 }
 
 /**
@@ -94,7 +93,7 @@ export function resumenSemana(analisis: Analisis, saldosDespues?: { nombre: stri
     }
   }
 
-  const url = process.env.APP_URL;
+  const url = env('APP_URL');
   if (url) { l.push(''); l.push(`<a href="${url}">Ver saldos y detalle</a>`); }
 
   return l.join('\n');

@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from 'pg';
+import { envObligatorio } from './env';
 
 declare global {
   // eslint-disable-next-line no-var
@@ -6,8 +7,7 @@ declare global {
 }
 
 function crearPool(): Pool {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) throw new Error('Falta la variable de entorno DATABASE_URL');
+  const connectionString = envObligatorio('DATABASE_URL');
   return new Pool({
     connectionString,
     max: 4,

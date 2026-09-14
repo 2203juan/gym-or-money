@@ -2,6 +2,7 @@
 import { useActionState, useState } from 'react';
 import { anular, editar } from '../acciones';
 import { formatoCOP } from '@/lib/multas';
+import { discoDeMulta } from '@/lib/discos';
 
 export default function Semana({ s }: { s: any }) {
   const [abierta, setAbierta] = useState(false);
@@ -9,88 +10,103 @@ export default function Semana({ s }: { s: any }) {
   const [estAnular, accAnular, pendAnular] = useActionState(anular, null);
   const [estEdit, accEdit, pendEdit] = useActionState(editar, null);
   const anulada = s.estado === 'anulada';
+  const enEdicion = s.detalle.find((m: any) => m.id === edit);
 
   return (
-    <div className="card" style={anulada ? { opacity: 0.6 } : undefined}>
-      <div className="row" onClick={() => setAbierta(!abierta)} style={{ cursor: 'pointer' }}>
-        <div className="grow">
-          <div className="name">
-            Semana {s.numero} {anulada ? <span className="pill bad">anulada</span> : null}
-          </div>
-          <div className="muted">{s.fecha_cierre} · procesó {s.procesada_por}</div>
-        </div>
-        <div className="amount pos">{s.totalFmt}</div>
-        <div className="muted">{abierta ? '▾' : '▸'}</div>
-      </div>
+    <div style={anulada ? { opacity: 0.55 } : undefined}>
+      <button
+        type="button"
+        onClick={() => setAbierta(!abierta)}
+        aria-expanded={abierta}
+        className="fila"
+        style={{ width: '100%', background: 'none', border: 0, borderBottom: '1px solid var(--line)', textAlign: 'left', cursor: 'pointer', color: 'inherit' }}
+      >
+        <span>
+          <span className="fila__nombre">
+            Semana {s.numero}
+            {anulada ? <span className="etiqueta etiqueta--anulado">Anulada</span> : null}
+          </span>
+          <span className="fila__sub">{s.fecha_cierre} · procesó {s.procesada_por}</span>
+        </span>
+        <span className="fila__monto">{s.totalFmt} {abierta ? '▾' : '▸'}</span>
+      </button>
 
       {abierta ? (
         <>
           {anulada ? (
-            <div className="alert warn">
-              Anulada por {s.anulada_por}. Motivo: {s.motivo_anulacion}. Puedes volver a procesar esta semana.
+            <div className="aviso aviso--ojo" style={{ marginTop: 12 }}>
+              Anulada por {s.anulada_por}. Motivo: {s.motivo_anulacion}. Puedes volver a procesarla.
             </div>
           ) : null}
 
-          <div className="scroll" style={{ marginTop: 10 }}>
-            <table>
-              <thead><tr><th>Persona</th><th>Marcador</th><th className="r">Multa</th><th></th></tr></thead>
-              <tbody>
-                {s.detalle.map((m: any) => (
-                  <tr key={m.id}>
-                    <td>
-                      {m.nombre} {m.emoji ?? ''}
-                      {m.estado === 'exenta' ? <> <span className="pill warn">exento</span></> : null}
-                      {m.estado === 'anulada' ? <> <span className="pill bad">anulada</span></> : null}
-                    </td>
-                    <td className="muted">{m.dias}/{m.meta}</td>
-                    <td className={'r amount ' + (m.monto > 0 ? 'pos' : 'zero')}>{formatoCOP(m.monto)}</td>
-                    <td className="r">
-                      {!anulada ? (
-                        <button type="button" className="ghost small"
-                          onClick={() => setEdit(edit === m.id ? null : m.id)}>editar</button>
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div style={{ marginTop: 8 }}>
+            {s.detalle.map((m: any) => (
+              <div className="calculo" key={m.id} style={{ gridTemplateColumns: '4px 1fr 52px auto auto' }}>
+                <span className="calculo__canto" data-disco={discoDeMulta(m.monto, m.estado)} />
+                <span className="calculo__nombre">
+                  {m.nombre}
+                  {m.estado === 'exenta' ? <span className="etiqueta etiqueta--excusa">Excusa</span> : null}
+                  {m.estado === 'anulada' ? <span className="etiqueta etiqueta--anulado">Anulada</span> : null}
+                </span>
+                <span className="calculo__marcador">{m.dias}/{m.meta}</span>
+                <span className={'calculo__monto' + (m.monto > 0 ? '' : ' calculo__monto--cero')}>
+                  {formatoCOP(m.monto)}
+                </span>
+                <span>
+                  {!anulada ? (
+                    <button
+                      type="button"
+                      className="boton boton--fantasma boton--chico"
+                      onClick={() => setEdit(edit === m.id ? null : m.id)}
+                    >
+                      Editar
+                    </button>
+                  ) : null}
+                </span>
+              </div>
+            ))}
           </div>
 
-          {edit !== null ? (
-            <form action={accEdit} className="card" style={{ marginTop: 12, background: 'var(--card2)' }}>
-              <input type="hidden" name="multaId" value={edit} />
-              <div className="two">
-                <div>
-                  <label>Días cumplidos</label>
-                  <input name="dias" type="number" min={0} max={14}
-                    defaultValue={s.detalle.find((m: any) => m.id === edit)?.dias} />
+          {enEdicion ? (
+            <form action={accEdit} className="forma forma--apretada">
+              <input type="hidden" name="multaId" value={enEdicion.id} />
+              <div className="duo">
+                <div className="campo">
+                  <label className="campo__l" htmlFor={`dias-${enEdicion.id}`}>Días cumplidos</label>
+                  <input id={`dias-${enEdicion.id}`} name="dias" type="number" min={0} max={14} defaultValue={enEdicion.dias} />
                 </div>
-                <div>
-                  <label>Estado</label>
-                  <select name="estado" defaultValue={s.detalle.find((m: any) => m.id === edit)?.estado}>
+                <div className="campo">
+                  <label className="campo__l" htmlFor={`estado-${enEdicion.id}`}>Estado</label>
+                  <select id={`estado-${enEdicion.id}`} name="estado" defaultValue={enEdicion.estado}>
                     <option value="cobrada">Cobrada</option>
                     <option value="exenta">Exenta por excusa</option>
                     <option value="anulada">Anulada</option>
                   </select>
                 </div>
               </div>
-              <label>Motivo</label>
-              <input name="motivo" placeholder="Por qué se corrige" />
-              {estEdit?.error ? <div className="alert bad">{estEdit.error}</div> : null}
-              {estEdit?.ok ? <div className="alert ok">{estEdit.ok}</div> : null}
-              <button disabled={pendEdit}>{pendEdit ? 'Guardando…' : 'Guardar corrección'}</button>
+              <div className="campo">
+                <label className="campo__l" htmlFor={`motivo-${enEdicion.id}`}>Motivo</label>
+                <input id={`motivo-${enEdicion.id}`} name="motivo" placeholder="Por qué se corrige" />
+              </div>
+              {estEdit?.error ? <div className="aviso aviso--malo">{estEdit.error}</div> : null}
+              {estEdit?.ok ? <div className="aviso aviso--ok">{estEdit.ok}</div> : null}
+              <button className="boton" disabled={pendEdit}>{pendEdit ? 'Guardando' : 'Guardar corrección'}</button>
             </form>
           ) : null}
 
           {!anulada ? (
-            <form action={accAnular} style={{ marginTop: 12 }}>
+            <form action={accAnular} className="forma forma--apretada">
               <input type="hidden" name="numero" value={s.numero} />
-              <label>Anular la semana completa (revierte todas sus multas)</label>
-              <input name="motivo" placeholder="Motivo de la anulación" />
-              {estAnular?.error ? <div className="alert bad">{estAnular.error}</div> : null}
-              {estAnular?.ok ? <div className="alert ok">{estAnular.ok}</div> : null}
-              <button className="danger" disabled={pendAnular}>
-                {pendAnular ? 'Anulando…' : `Anular semana ${s.numero}`}
+              <div className="campo">
+                <label className="campo__l" htmlFor={`anular-${s.numero}`}>
+                  Anular la semana completa · revierte todas sus multas
+                </label>
+                <input id={`anular-${s.numero}`} name="motivo" placeholder="Motivo de la anulación" />
+              </div>
+              {estAnular?.error ? <div className="aviso aviso--malo">{estAnular.error}</div> : null}
+              {estAnular?.ok ? <div className="aviso aviso--ok">{estAnular.ok}</div> : null}
+              <button className="boton boton--peligro" disabled={pendAnular}>
+                {pendAnular ? 'Anulando' : `Anular semana ${s.numero}`}
               </button>
             </form>
           ) : null}

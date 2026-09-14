@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { usuarioActual } from '@/lib/auth';
 import { q } from '@/lib/db';
@@ -10,36 +11,57 @@ const ETIQUETAS: Record<string, string> = {
   multa_editada: 'Corrigió una multa',
   abono_registrado: 'Registró un abono',
   saldo_inicial_fijado: 'Fijó un saldo inicial',
+  saldo_inicial_migrado: 'Migró los saldos de Splitwise',
   alias_actualizados: 'Actualizó alias',
   telegram_recibido: 'Mensaje recibido por Telegram',
-  telegram_ignorado: 'Mensaje de Telegram ignorado',
 };
+
+function resumir(accion: string, d: any): string {
+  if (!d || typeof d !== 'object') return '';
+  switch (accion) {
+    case 'semana_procesada': return `Semana ${d.semana} · ${d.multas} multas`;
+    case 'semana_anulada':   return `Semana ${d.semana} · ${d.motivo ?? 'sin motivo'}`;
+    case 'abono_registrado': return `${d.persona} · ${d.monto}`;
+    case 'multa_editada':    return `${d.persona} · ${d.antes?.dias}/${d.despues?.dias ?? ''}`;
+    case 'telegram_recibido':return `Semana ${d.semana ?? '?'}`;
+    case 'saldo_inicial_fijado': return `${d.persona} · ${d.monto}`;
+    case 'saldo_inicial_migrado': return `${d.personas} personas · ${d.origen}`;
+    case 'alias_actualizados': return (d.alias ?? []).join(', ');
+    default: return '';
+  }
+}
 
 export default async function Bitacora() {
   if (!(await usuarioActual())) redirect('/login');
   const filas = await q<any>(
-    `select id, accion, autor, detalle, to_char(creado_en at time zone 'America/Bogota',
-     'YYYY-MM-DD HH24:MI') as cuando from multas.bitacora order by creado_en desc limit 200`);
+    `select id, accion, autor, detalle,
+            to_char(creado_en at time zone 'America/Bogota', 'DD Mon · HH24:MI') as cuando
+     from multas.bitacora order by creado_en desc limit 200`,
+  );
 
   return (
     <>
-      <h1>Bitácora</h1>
-      <p className="sub">Toda acción queda registrada con autor y fecha. Nadie es administrador, así que esto es lo que nos mantiene honestos.</p>
+      <header className="barra">
+        <Link href="/">← Saldos</Link>
+        <span>Bitácora</span>
+      </header>
+
+      <section className="total">
+        <p className="total__etiqueta">Registro</p>
+        <p className="total__cifra total__cifra--medio">{filas.length}</p>
+        <p className="total__pie"><span>Nadie es administrador. Esto es lo que nos mantiene honestos.</span></p>
+      </section>
+
       {filas.map((f: any) => (
-        <div key={f.id} className="card">
-          <div className="row">
-            <div className="grow">
-              <div className="name">{ETIQUETAS[f.accion] ?? f.accion}</div>
-              <div className="muted">{f.autor}</div>
-            </div>
-            <div className="muted">{f.cuando}</div>
-          </div>
-          <div className="muted" style={{ marginTop: 6, fontFamily: 'ui-monospace, monospace', fontSize: 12, wordBreak: 'break-word' }}>
-            {JSON.stringify(f.detalle)}
-          </div>
+        <div className="movimiento" key={f.id}>
+          <span>
+            <span className="movimiento__t">{ETIQUETAS[f.accion] ?? f.accion}</span>
+            <span className="movimiento__d">{f.autor}{resumir(f.accion, f.detalle) ? ` · ${resumir(f.accion, f.detalle)}` : ''}</span>
+          </span>
+          <span className="tenue" style={{ whiteSpace: 'nowrap' }}>{f.cuando}</span>
         </div>
       ))}
-      {filas.length === 0 ? <div className="card muted">Sin movimientos todavía.</div> : null}
+      {filas.length === 0 ? <p className="vacio">Sin movimientos todavía.</p> : null}
     </>
   );
 }

@@ -81,9 +81,29 @@ export async function analizarMensaje(texto: string): Promise<Analisis> {
   const items = parsed.lineas.map((l) => evaluarLinea(l, buscarPersona(personas, l.nombreNormalizado)));
 
   const desconocidos = items.filter((i) => i.personaId === null).map((i) => i.nombreCrudo);
+
+  // Dos lineas del mensaje que apuntan a la MISMA persona (nombre repetido, o dos
+  // alias distintos de la misma persona). No adivinamos cual vale: se reporta y se bloquea.
+  const porPersona = new Map<number, ItemPrevio[]>();
+  for (const i of items) {
+    if (i.personaId === null) continue;
+    const previos = porPersona.get(i.personaId) ?? [];
+    previos.push(i);
+    porPersona.set(i.personaId, previos);
+  }
+  for (const repetidos of porPersona.values()) {
+    if (repetidos.length < 2) continue;
+    const comoSeEscribio = repetidos.map((r) => `\u00ab${r.nombreCrudo}\u00bb`).join(' y ');
+    for (const r of repetidos) {
+      r.error = `${comoSeEscribio} son la misma persona (${r.nombre}). ` +
+        `Deja una sola linea, o corrige los alias en Ajustes.`;
+    }
+  }
+
   const advertencias = items
     .filter((i) => i.error && i.personaId !== null)
-    .map((i) => `${i.nombre}: ${i.error}`);
+    .map((i) => `${i.nombre}: ${i.error}`)
+    .filter((m, k, todos) => todos.indexOf(m) === k);
 
   let yaProcesada = false;
   if (parsed.semana !== null) {
@@ -128,7 +148,7 @@ export async function registrarSemana(
       ok: false,
       motivo: 'errores',
       analisis,
-      detalle: bloquean.map((i) => i.error).join(' | '),
+      detalle: [...new Set(bloquean.map((i) => i.error))].join(' | '),
     };
   }
 
@@ -171,8 +191,18 @@ export async function registrarSemana(
 
     return { ok: true, semanaId, semana: analisis.semana, analisis };
   } catch (e: any) {
-    // Carrera: otro proceso inserto la misma semana entre el analisis y el insert
-    if (e?.code === '23505') return { ok: false, motivo: 'ya_procesada', analisis };
+    // Solo el indice de la semana significa "ya estaba registrada" (carrera: otro
+    // proceso la inserto entre el analisis y el insert). Cualquier otra violacion de
+    // unicidad es un problema distinto y se reporta como tal, no se disfraza.
+    if (e?.code === '23505' && e?.constraint === 'semanas_numero_viva') {
+      return { ok: false, motivo: 'ya_procesada', analisis };
+    }
+    if (e?.code === '23505' && e?.constraint === 'multas_semana_persona') {
+      return {
+        ok: false, motivo: 'errores', analisis,
+        detalle: 'El mensaje trae dos lineas para la misma persona. Deja una sola y vuelve a intentar.',
+      };
+    }
     throw e;
   }
 }

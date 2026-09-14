@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { pool, bitacora } from '@/lib/db';
 import { registrarSemana, saldos, analizarMensaje } from '@/lib/dominio';
 import { enviarMensaje, resumenSemana } from '@/lib/telegram';
+import { env } from '@/lib/env';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -14,7 +15,7 @@ export const dynamic = 'force-dynamic';
  */
 export async function POST(req: Request) {
   // Verificacion del secreto del webhook
-  const secreto = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const secreto = env('TELEGRAM_WEBHOOK_SECRET');
   if (secreto && req.headers.get('x-telegram-bot-api-secret-token') !== secreto) {
     return NextResponse.json({ ok: false }, { status: 401 });
   }
@@ -52,7 +53,8 @@ export async function POST(req: Request) {
       const { formatoCOP } = await import('@/lib/multas');
       const lineas = ['<b>Saldos</b>', ...s.map((x) => `• ${x.nombre}: ${formatoCOP(x.saldo)}`),
         '', `<b>Bote: ${formatoCOP(total)}</b>`];
-      if (process.env.APP_URL) lineas.push(`<a href="${process.env.APP_URL}">Ver detalle</a>`);
+      const app = env('APP_URL');
+      if (app) lineas.push(`<a href="${app}">Ver detalle</a>`);
       await enviarMensaje(chatId, lineas.join('\n'));
       return NextResponse.json({ ok: true });
     }

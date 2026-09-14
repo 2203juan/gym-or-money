@@ -10,59 +10,80 @@ export default async function Persona({ params }: { params: Promise<{ id: string
   if (!(await usuarioActual())) redirect('/login');
   const { id } = await params;
   const personaId = Number(id);
+  if (!Number.isFinite(personaId)) notFound();
 
-  const s = await q<any>('select * from multas.saldos where id=$1', [personaId]);
-  if (!s.length) notFound();
-  const p = s[0];
+  const filas = await q<any>('select * from multas.saldos where id=$1', [personaId]);
+  if (!filas.length) notFound();
+  const p = filas[0];
 
-  const movimientos = await q<any>(`
-    select 'multa' as tipo, se.numero::text as ref, se.fecha_cierre::text as fecha,
-           m.monto, m.estado, (m.dias_cumplidos || '/' || m.meta) as detalle, m.motivo
-    from multas.multas m join multas.semanas se on se.id = m.semana_id
-    where m.persona_id = $1
-    union all
-    select case when a.tipo='saldo_inicial' then 'saldo_inicial' else 'abono' end,
-           a.registrado_por, a.fecha::text,
-           case when a.tipo='saldo_inicial' then a.monto else -a.monto end,
-           a.estado, coalesce(a.nota,''), null
-    from multas.abonos a where a.persona_id = $1
-    order by fecha desc, ref desc
-  `, [personaId]);
+  const movimientos = await q<any>(
+    `select 'multa' as tipo, se.numero::text as ref, se.fecha_cierre::text as fecha,
+            m.monto, m.estado, (m.dias_cumplidos || '/' || m.meta) as detalle
+     from multas.multas m join multas.semanas se on se.id = m.semana_id
+     where m.persona_id = $1
+     union all
+     select case when a.tipo='saldo_inicial' then 'saldo_inicial' else 'abono' end,
+            a.registrado_por, a.fecha::text,
+            case when a.tipo='saldo_inicial' then a.monto else -a.monto end,
+            a.estado, coalesce(a.nota,'')
+     from multas.abonos a where a.persona_id = $1
+     order by fecha desc, ref desc`,
+    [personaId],
+  );
 
   return (
     <>
-      <p className="muted"><Link href="/">← Saldos</Link></p>
-      <h1>{p.nombre}</h1>
-      <div className="bote">
-        <div className="l">Saldo actual</div>
-        <div className="n">{formatoCOP(p.saldo)}</div>
-        <div className="muted" style={{ marginTop: 6 }}>
-          inicial {formatoCOP(p.saldo_inicial)} + multas {formatoCOP(p.total_multas)} − abonos {formatoCOP(p.total_abonos)}
-        </div>
-      </div>
+      <header className="barra">
+        <Link href="/">← Saldos</Link>
+        <span>{p.nombre}</span>
+      </header>
 
-      <h2>Movimientos</h2>
-      <div className="card scroll">
-        <table>
-          <thead><tr><th>Fecha</th><th>Concepto</th><th className="r">Monto</th></tr></thead>
-          <tbody>
-            {movimientos.map((m: any, k: number) => (
-              <tr key={k} style={m.estado === 'anulada' || m.estado === 'anulado' ? { opacity: .45 } : undefined}>
-                <td className="muted">{m.fecha}</td>
-                <td>
-                  {m.tipo === 'multa' ? `Semana ${m.ref} · ${m.detalle}` : null}
-                  {m.tipo === 'abono' ? `Abono${m.detalle ? ' · ' + m.detalle : ''}` : null}
-                  {m.tipo === 'saldo_inicial' ? 'Saldo inicial migrado de Splitwise' : null}
-                  {m.estado === 'exenta' ? <> <span className="pill warn">exento</span></> : null}
-                  {m.estado === 'anulada' || m.estado === 'anulado' ? <> <span className="pill bad">anulado</span></> : null}
-                </td>
-                <td className={'r amount ' + (m.monto > 0 ? 'pos' : 'zero')}>{formatoCOP(m.monto)}</td>
-              </tr>
-            ))}
-            {movimientos.length === 0 ? <tr><td colSpan={3} className="muted">Sin movimientos.</td></tr> : null}
-          </tbody>
-        </table>
-      </div>
+      <section className="total">
+        <p className="total__etiqueta">{p.saldo < 0 ? 'A favor' : p.saldo === 0 ? 'Al día' : 'Debe'}</p>
+        <p className={'total__cifra total__cifra--medio' + (p.saldo < 0 ? ' fila__monto--credito' : '')}>
+          {formatoCOP(Math.abs(p.saldo))}
+        </p>
+        <p className="total__pie">
+          {p.saldo_inicial !== 0 ? <span className="marca marca--quieta">Inicial {formatoCOP(p.saldo_inicial)}</span> : null}
+          <span className="marca marca--quieta">Multas {formatoCOP(p.total_multas)}</span>
+          <span className="marca marca--quieta">Abonos {formatoCOP(p.total_abonos)}</span>
+        </p>
+      </section>
+
+      <div className="seccion"><h2 className="seccion__t">Movimientos</h2></div>
+
+      {movimientos.map((m: any, k: number) => {
+        const anulado = m.estado === 'anulada' || m.estado === 'anulado';
+        return (
+          <div key={k} className={'movimiento' + (anulado ? ' movimiento--anulado' : '')}>
+            <span>
+              <span className="movimiento__t">
+                {m.tipo === 'multa' ? `Semana ${m.ref} · ${m.detalle}` : null}
+                {m.tipo === 'abono' ? 'Abono' : null}
+                {m.tipo === 'saldo_inicial' ? 'Saldo inicial migrado' : null}
+                {m.estado === 'exenta' ? <span className="etiqueta etiqueta--excusa">Excusa</span> : null}
+                {anulado ? <span className="etiqueta etiqueta--anulado">Anulado</span> : null}
+              </span>
+              <span className="movimiento__d">
+                {m.fecha}
+                {m.tipo === 'abono' && m.detalle ? ` · ${m.detalle}` : ''}
+                {m.tipo === 'abono' ? ` · registró ${m.ref}` : ''}
+                {m.tipo === 'saldo_inicial' ? ' · desde Splitwise' : ''}
+              </span>
+            </span>
+            <span className={'movimiento__a' + (m.monto < 0 ? ' movimiento__a--negativo' : '')}>
+              {formatoCOP(m.monto)}
+            </span>
+          </div>
+        );
+      })}
+      {movimientos.length === 0 ? <p className="vacio">Sin movimientos.</p> : null}
+
+      <p className="nota">
+        <Link href="/abonos" style={{ textDecoration: 'underline' }}>Registrar un abono</Link>
+        {'  ·  '}
+        <Link href="/semanas" style={{ textDecoration: 'underline' }}>Corregir una multa</Link>
+      </p>
     </>
   );
 }
