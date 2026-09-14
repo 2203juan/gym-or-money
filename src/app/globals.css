@@ -242,6 +242,18 @@ input[type="checkbox"] { width: auto; accent-color: var(--azul); }
 .boton--rojo   { background: var(--rojo); color: #FFFFFF; }
 .boton--texto  { background: none; color: var(--rojo); font-weight: 400; }
 .boton--chico  { width: auto; padding: 7px 12px; font-size: 15px; border-radius: 9px; }
+/* estado abierto del boton que despliega un editor */
+.boton--sec-on { background: var(--azul); color: #FFFFFF; }
+
+/* Editor embebido: va pegado debajo de la fila que se esta editando, con fondo
+   hundido para que se lea como parte de esa fila y no como una seccion nueva. */
+.editor {
+  background: var(--card-2);
+  padding: 14px 16px;
+  box-shadow: inset 0 1px 0 var(--sep-soft), inset 0 -1px 0 var(--sep-soft);
+  border-left: 3px solid var(--azul);
+}
+.editor input, .editor select { background: var(--card); }
 
 /* --- AVISOS -------------------------------------------------------------- */
 .aviso {
