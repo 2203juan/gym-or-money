@@ -30,11 +30,13 @@ export default function Anillo({ dias, meta, tam = 34, conTexto = false }: Props
   const cero = meta > 0 && dias <= 0;
 
   return (
-    <span className="anilloCaja" style={{ width: tam, height: tam }}>
-      <svg
-        className="anillo" width={tam} height={tam} viewBox="0 0 36 36"
-        role="img" aria-label={`${dias} de ${meta} días`}
-      >
+    /* El tamaño viaja como variable CSS para que una media query lo pueda
+       reducir en pantallas angostas sin tocar el componente. */
+    <span
+      className={'anilloCaja' + (tam >= 48 ? ' anilloCaja--grande' : '')}
+      style={{ ['--tam-base' as string]: `${tam}px` }}
+    >
+      <svg className="anillo" viewBox="0 0 36 36" role="img" aria-label={`${dias} de ${meta} días`}>
         <circle
           className={'anillo__b' + (cero ? ' anillo__b--cero' : '')}
           cx="18" cy="18" r="15.5" strokeWidth={grosor}
@@ -48,7 +50,7 @@ export default function Anillo({ dias, meta, tam = 34, conTexto = false }: Props
         ) : null}
       </svg>
       {cumplio ? (
-        <span className="anilloCaja__t" style={{ color, fontSize: tam >= 48 ? 15 : 13 }}>✓</span>
+        <span className="anilloCaja__t" style={{ color }}>✓</span>
       ) : conTexto ? (
         <span className="anilloCaja__t" style={{ color }}>{dias}/{meta}</span>
       ) : null}

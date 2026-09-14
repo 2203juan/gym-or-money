@@ -88,8 +88,8 @@ export default async function Resumen() {
               Semana {semana} <ChevronRight size={12} aria-hidden />
             </Link>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div className="trio" style={{ flex: 1 }}>
+          <div className="semana">
+            <div className="trio">
               <div className="trio__c">
                 <div className="trio__l" style={{ color: 'var(--verde)' }}>Cumplieron</div>
                 <div className="trio__v"><b>{cumplieron}</b><span>de {marcadores.length}</span></div>

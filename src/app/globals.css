@@ -69,6 +69,7 @@
 /* --- BASE ---------------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
 html, body { margin: 0; padding: 0; }
+body { overflow-x: clip; }   /* red de seguridad: nada desplaza la pagina de lado */
 
 body {
   background: var(--ground);
@@ -99,13 +100,17 @@ a { color: inherit; text-decoration: none; }
   margin-inline: auto;
   padding: 14px 16px calc(94px + env(safe-area-inset-bottom));
   display: grid;
+  grid-template-columns: minmax(0, 1fr);   /* impide que un hijo ensanche la pista */
   gap: 18px;
   align-content: start;
 }
+.pantalla > * { min-width: 0; }
 
 /* titulo grande */
-.titular { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
-.titular h1 { margin: 0; font-size: 32px; font-weight: 700; letter-spacing: -.035em; line-height: 1.12; }
+.titular { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; min-width: 0; }
+.titular > * { min-width: 0; }
+.titular h1 { margin: 0; font-size: clamp(26px, 8vw, 32px); font-weight: 700;
+  letter-spacing: -.035em; line-height: 1.12; overflow-wrap: break-word; }
 .titular__v { margin: 3px 0 0; font-size: 14px; color: var(--label-2); }
 .volver {
   display: inline-flex; align-items: center; gap: 2px;
@@ -123,14 +128,18 @@ a { color: inherit; text-decoration: none; }
 .tarjeta--lista { padding: 0; overflow: hidden; }
 
 .cab { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
-.cab__t { font-size: 15px; font-weight: 600; }
+.cab__t { font-size: 15px; font-weight: 600; min-width: 0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cab__d {
   margin-left: auto; display: inline-flex; align-items: center; gap: 2px;
   font-size: 14px; color: var(--label-2); white-space: nowrap;
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; flex: 0 1 auto;
 }
+.cab { min-width: 0; }
 
 .cifra { display: flex; align-items: baseline; gap: 5px; letter-spacing: -.03em; }
-.cifra b { font-size: 34px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.05; }
+.cifra b { font-size: clamp(27px, 8.6vw, 34px); font-weight: 700;
+  font-variant-numeric: tabular-nums; line-height: 1.05; }
 .cifra span { font-size: 15px; font-weight: 500; color: var(--label-2); letter-spacing: -.01em; }
 .cifra--verde b { color: var(--verde); }
 .cifra--rojo b { color: var(--rojo); }
@@ -139,23 +148,30 @@ a { color: inherit; text-decoration: none; }
 
 /* tres estadisticas, tipo Move / Exercise / Stand */
 .trio { display: flex; align-items: center; }
-.trio__c { flex: 1; min-width: 0; padding-right: 10px; }
+.trio__c { flex: 1 1 0; min-width: 0; padding-right: 10px; }
 .trio__c + .trio__c { border-left: 1px solid var(--sep-soft); padding-left: 12px; }
 .trio__l { font-size: 12.5px; font-weight: 600; }
 .trio__v { display: flex; align-items: baseline; gap: 3px; margin-top: 1px; }
-.trio__v b { font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.trio__v b { font-size: clamp(18px, 5.4vw, 21px); font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
 .trio__v span { font-size: 12.5px; color: var(--label-2); }
 
 /* --- GRUPOS DE LISTA ----------------------------------------------------- */
-.grupo { display: grid; gap: 12px; }
-.grupo__h { display: flex; justify-content: space-between; align-items: baseline; padding: 0 4px; gap: 12px; }
+.grupo { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; }
+.grupo__h { display: flex; justify-content: space-between; align-items: baseline;
+  padding: 0 4px; gap: 12px; flex-wrap: wrap; }
+.grupo__h h2 { min-width: 0; }
 .grupo__h h2 { margin: 0; font-size: 21px; font-weight: 700; letter-spacing: -.025em; }
 
 .enlace { color: var(--azul); font-size: 16px; background: none; border: 0; padding: 0;
   font-family: inherit; cursor: pointer; }
 
 /* --- ANILLO -------------------------------------------------------------- */
-.anilloCaja { position: relative; flex: none; display: grid; place-items: center; }
+.anilloCaja {
+  position: relative; flex: none; display: grid; place-items: center;
+  width: var(--tam, var(--tam-base, 34px));
+  height: var(--tam, var(--tam-base, 34px));
+}
+.anilloCaja > svg { width: 100%; height: 100%; display: block; }
 .anillo { transform: rotate(-90deg); }
 .anillo__b { fill: none; stroke: var(--fill); }
 .anillo__b--cero { stroke: color-mix(in srgb, var(--rojo) 30%, transparent); }
@@ -163,6 +179,25 @@ a { color: inherit; text-decoration: none; }
 .anilloCaja__t {
   position: absolute; font-size: 11px; font-weight: 600;
   font-variant-numeric: tabular-nums; letter-spacing: -.02em;
+}
+.anilloCaja--grande .anilloCaja__t { font-size: 14px; }
+
+/* Fila de la tarjeta "Esta semana": tres cifras y el anillo. */
+.semana { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.semana .trio { flex: 1 1 0; min-width: 0; }
+
+/* En pantallas angostas (iPhone SE, 320 px) las tres cifras y el anillo no caben.
+   Cede el anillo, porque repite un dato que el trío ya dice con palabras
+   ("Cumplieron 5 de 9"). Los anillos de cada persona se quedan: ahí no hay
+   ninguna cifra que los sustituya. */
+@media (max-width: 380px) {
+  .semana { gap: 10px; }
+  .anilloCaja--grande { --tam: 44px; }
+  .trio__c { padding-right: 7px; }
+  .trio__c + .trio__c { padding-left: 8px; }
+}
+@media (max-width: 359px) {
+  .semana > .anilloCaja--grande { display: none; }
 }
 
 /* --- FILAS --------------------------------------------------------------- */
@@ -173,7 +208,9 @@ a { color: inherit; text-decoration: none; }
 .fila--anulada { opacity: .45; }
 a.fila:active, button.fila:active { background: var(--fill); }
 
-.fila__n { flex: 1; min-width: 0; }
+.fila > * { min-width: 0; }
+.fila__n { flex: 1 1 auto; min-width: 0; }
+.fila__nm, .fila__s { overflow-wrap: break-word; }
 .fila__nm { display: block; font-size: 17px; font-weight: 500; letter-spacing: -.02em; }
 .fila__s { display: block; font-size: 13.5px; color: var(--label-2); margin-top: 1px; }
 .fila__a { font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums;
@@ -200,13 +237,16 @@ a.fila:active, button.fila:active { background: var(--fill); }
 .vacio { padding: 26px 16px; text-align: center; font-size: 15px; color: var(--label-2); }
 
 /* --- FORMULARIOS --------------------------------------------------------- */
-.forma { display: grid; gap: 14px; }
+.forma { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.forma > * { min-width: 0; }
 
 .campo { display: grid; gap: 6px; }
 .campo__l { font-size: 13px; font-weight: 600; color: var(--label-2); padding-left: 4px; }
 
 input, select, textarea {
   width: 100%;
+  min-width: 0;          /* sin esto, un input[type=date] ensancha su columna en iOS */
+  max-width: 100%;
   background: var(--card);
   border: 0;
   border-radius: var(--r);
@@ -217,11 +257,14 @@ input, select, textarea {
   padding: 14px 16px;
 }
 textarea { min-height: 170px; line-height: 1.6; font-size: 16px; resize: vertical; }
+/* iOS le da al selector de fecha un ancho intrinseco mayor que su columna */
+input[type="date"] { -webkit-appearance: none; appearance: none; }
 input[type="checkbox"] { width: auto; accent-color: var(--azul); }
 ::placeholder { color: var(--label-3); }
 
 .duo { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-@media (max-width: 400px) { .duo { grid-template-columns: 1fr; } }
+.duo > * { min-width: 0; }
+@media (max-width: 430px) { .duo { grid-template-columns: 1fr; } }
 
 .opcion {
   display: flex; align-items: center; gap: 10px;
