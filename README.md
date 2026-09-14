@@ -7,7 +7,7 @@ saldo acumulado de cada uno.
 - **Bot de Telegram** — canal principal. Se le reenvía el resumen y responde en el mismo
   grupo con el detalle de lo que acaba de registrar y los saldos al día.
 - **Web** — saldos, historial, abonos, correcciones y bitácora. Pensada para el celular.
-- Stack: Next.js 15 (App Router) + Postgres (Supabase). Todo cabe en los planes gratuitos.
+- Stack: Next.js 16 (App Router) + Postgres (Supabase). Todo cabe en los planes gratuitos.
 
 ## Reglas implementadas
 
@@ -94,6 +94,13 @@ Los mensajes que no tienen ninguna línea `Nombre: hechos/meta` se ignoran en si
 - **El saldo nunca se almacena** — la vista `multas.saldos` lo reconstruye siempre desde los
   movimientos: saldo inicial + multas cobradas − abonos.
 - **Si Telegram falla**, la semana ya quedó registrada: no se revierte nada.
+
+## Seguridad de dependencias
+
+Next.js está en 16.3.5, por encima de los parches de
+[CVE-2025-66478](https://nextjs.org/blog/CVE-2025-66478) (el RCE de React Server Components,
+CVSS 10.0). Vercel bloquea el despliegue de cualquier versión anterior al parche, así que **no
+bajes la versión de `next`**. `npm audit --omit=dev` sale limpio.
 
 ## Tests
 
