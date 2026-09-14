@@ -1,8 +1,9 @@
 'use client';
 import { useActionState, useState } from 'react';
+import { ChevronRight, ChevronDown } from 'lucide-react';
 import { anular, editar } from '../acciones';
 import { formatoCOP } from '@/lib/multas';
-import { discoDeMulta } from '@/lib/discos';
+import Anillo from '../anillo';
 
 export default function Semana({ s }: { s: any }) {
   const [abierta, setAbierta] = useState(false);
@@ -13,71 +14,64 @@ export default function Semana({ s }: { s: any }) {
   const enEdicion = s.detalle.find((m: any) => m.id === edit);
 
   return (
-    <div style={anulada ? { opacity: 0.55 } : undefined}>
-      <button
-        type="button"
-        onClick={() => setAbierta(!abierta)}
-        aria-expanded={abierta}
-        className="fila"
-        style={{ width: '100%', background: 'none', border: 0, borderBottom: '1px solid var(--line)', textAlign: 'left', cursor: 'pointer', color: 'inherit' }}
-      >
-        <span>
-          <span className="fila__nombre">
+    <div className="tarjeta tarjeta--lista" style={anulada ? { opacity: 0.6 } : undefined}>
+      <button type="button" className="fila" aria-expanded={abierta}
+        onClick={() => setAbierta(!abierta)} style={{ cursor: 'pointer' }}>
+        <span className="fila__n">
+          <span className="fila__nm">
             Semana {s.numero}
-            {anulada ? <span className="etiqueta etiqueta--anulado">Anulada</span> : null}
+            {anulada ? <span className="insignia insignia--roja">Anulada</span> : null}
           </span>
-          <span className="fila__sub">{s.fecha_cierre} · procesó {s.procesada_por}</span>
+          <span className="fila__s">{s.fecha_cierre} · procesó {s.procesada_por}</span>
         </span>
-        <span className="fila__monto">{s.totalFmt} {abierta ? '▾' : '▸'}</span>
+        <span className="fila__a">{s.totalFmt}</span>
+        {abierta
+          ? <ChevronDown size={14} className="fila__ch" aria-hidden />
+          : <ChevronRight size={14} className="fila__ch" aria-hidden />}
       </button>
 
       {abierta ? (
         <>
           {anulada ? (
-            <div className="aviso aviso--ojo" style={{ marginTop: 12 }}>
-              Anulada por {s.anulada_por}. Motivo: {s.motivo_anulacion}. Puedes volver a procesarla.
+            <div style={{ padding: '12px 16px', borderTop: '1px solid var(--sep-soft)' }}>
+              <p className="tenue" style={{ margin: 0 }}>
+                Anulada por {s.anulada_por}. Motivo: {s.motivo_anulacion}. Puedes volver a procesarla.
+              </p>
             </div>
           ) : null}
 
-          <div style={{ marginTop: 8 }}>
-            {s.detalle.map((m: any) => (
-              <div className="calculo" key={m.id} style={{ gridTemplateColumns: '4px 1fr 52px auto auto' }}>
-                <span className="calculo__canto" data-disco={discoDeMulta(m.monto, m.estado)} />
-                <span className="calculo__nombre">
+          {s.detalle.map((m: any) => (
+            <div className="fila" key={m.id}>
+              <Anillo dias={m.dias} meta={m.meta} />
+              <span className="fila__n">
+                <span className="fila__nm">
                   {m.nombre}
-                  {m.estado === 'exenta' ? <span className="etiqueta etiqueta--excusa">Excusa</span> : null}
-                  {m.estado === 'anulada' ? <span className="etiqueta etiqueta--anulado">Anulada</span> : null}
+                  {m.estado === 'exenta' ? <span className="insignia insignia--naranja">Excusa</span> : null}
+                  {m.estado === 'anulada' ? <span className="insignia insignia--roja">Anulada</span> : null}
                 </span>
-                <span className="calculo__marcador">{m.dias}/{m.meta}</span>
-                <span className={'calculo__monto' + (m.monto > 0 ? '' : ' calculo__monto--cero')}>
-                  {formatoCOP(m.monto)}
-                </span>
-                <span>
-                  {!anulada ? (
-                    <button
-                      type="button"
-                      className="boton boton--fantasma boton--chico"
-                      onClick={() => setEdit(edit === m.id ? null : m.id)}
-                    >
-                      Editar
-                    </button>
-                  ) : null}
-                </span>
-              </div>
-            ))}
-          </div>
+                <span className="fila__s">{m.dias} de {m.meta} días</span>
+              </span>
+              <span className={'fila__a' + (m.monto > 0 ? '' : ' fila__a--gris')}>{formatoCOP(m.monto)}</span>
+              {!anulada ? (
+                <button type="button" className="boton boton--sec boton--chico"
+                  onClick={() => setEdit(edit === m.id ? null : m.id)}>Editar</button>
+              ) : null}
+            </div>
+          ))}
 
           {enEdicion ? (
-            <form action={accEdit} className="forma forma--apretada">
+            <form action={accEdit} className="forma" style={{ padding: 16, borderTop: '1px solid var(--sep-soft)' }}>
               <input type="hidden" name="multaId" value={enEdicion.id} />
               <div className="duo">
                 <div className="campo">
                   <label className="campo__l" htmlFor={`dias-${enEdicion.id}`}>Días cumplidos</label>
-                  <input id={`dias-${enEdicion.id}`} name="dias" type="number" min={0} max={14} defaultValue={enEdicion.dias} />
+                  <input id={`dias-${enEdicion.id}`} name="dias" type="number" min={0} max={14}
+                    defaultValue={enEdicion.dias} style={{ background: 'var(--card-2)' }} />
                 </div>
                 <div className="campo">
                   <label className="campo__l" htmlFor={`estado-${enEdicion.id}`}>Estado</label>
-                  <select id={`estado-${enEdicion.id}`} name="estado" defaultValue={enEdicion.estado}>
+                  <select id={`estado-${enEdicion.id}`} name="estado" defaultValue={enEdicion.estado}
+                    style={{ background: 'var(--card-2)' }}>
                     <option value="cobrada">Cobrada</option>
                     <option value="exenta">Exenta por excusa</option>
                     <option value="anulada">Anulada</option>
@@ -86,27 +80,29 @@ export default function Semana({ s }: { s: any }) {
               </div>
               <div className="campo">
                 <label className="campo__l" htmlFor={`motivo-${enEdicion.id}`}>Motivo</label>
-                <input id={`motivo-${enEdicion.id}`} name="motivo" placeholder="Por qué se corrige" />
+                <input id={`motivo-${enEdicion.id}`} name="motivo" placeholder="Por qué se corrige"
+                  style={{ background: 'var(--card-2)' }} />
               </div>
               {estEdit?.error ? <div className="aviso aviso--malo">{estEdit.error}</div> : null}
               {estEdit?.ok ? <div className="aviso aviso--ok">{estEdit.ok}</div> : null}
-              <button className="boton" disabled={pendEdit}>{pendEdit ? 'Guardando' : 'Guardar corrección'}</button>
+              <button className="boton" disabled={pendEdit}>{pendEdit ? 'Guardando…' : 'Guardar corrección'}</button>
             </form>
           ) : null}
 
           {!anulada ? (
-            <form action={accAnular} className="forma forma--apretada">
+            <form action={accAnular} className="forma" style={{ padding: 16, borderTop: '1px solid var(--sep-soft)' }}>
               <input type="hidden" name="numero" value={s.numero} />
               <div className="campo">
                 <label className="campo__l" htmlFor={`anular-${s.numero}`}>
                   Anular la semana completa · revierte todas sus multas
                 </label>
-                <input id={`anular-${s.numero}`} name="motivo" placeholder="Motivo de la anulación" />
+                <input id={`anular-${s.numero}`} name="motivo" placeholder="Motivo de la anulación"
+                  style={{ background: 'var(--card-2)' }} />
               </div>
               {estAnular?.error ? <div className="aviso aviso--malo">{estAnular.error}</div> : null}
               {estAnular?.ok ? <div className="aviso aviso--ok">{estAnular.ok}</div> : null}
-              <button className="boton boton--peligro" disabled={pendAnular}>
-                {pendAnular ? 'Anulando' : `Anular semana ${s.numero}`}
+              <button className="boton boton--texto" disabled={pendAnular}>
+                {pendAnular ? 'Anulando…' : `Anular semana ${s.numero}`}
               </button>
             </form>
           ) : null}

@@ -1,12 +1,7 @@
-// Fuentes variables autoalojadas: se empaquetan con la app, sin peticiones a
-// terceros y sin depender de que Google Fonts esté disponible al compilar.
-import '@fontsource-variable/archivo';
-import '@fontsource-variable/big-shoulders-display';
 import './globals.css';
-
 import type { Metadata, Viewport } from 'next';
 import { usuarioActual } from '@/lib/auth';
-import Nav from './nav';
+import Barra from './barra';
 
 export const metadata: Metadata = {
   title: 'Ejercicio o Money',
@@ -18,8 +13,8 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: 'cover',
   themeColor: [
-    { media: '(prefers-color-scheme: light)', color: '#16181C' },
-    { media: '(prefers-color-scheme: dark)', color: '#121417' },
+    { media: '(prefers-color-scheme: light)', color: '#F2F2F7' },
+    { media: '(prefers-color-scheme: dark)', color: '#000000' },
   ],
 };
 
@@ -28,10 +23,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="es">
       <body>
-        <div className="pantalla">
-          <div className="cuerpo">{children}</div>
-          {usuario ? <Nav /> : null}
-        </div>
+        <main className="pantalla">{children}</main>
+        {usuario ? <Barra /> : null}
       </body>
     </html>
   );

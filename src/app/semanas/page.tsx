@@ -1,5 +1,5 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { CalendarDays } from 'lucide-react';
 import { usuarioActual } from '@/lib/auth';
 import { q } from '@/lib/db';
 import { formatoCOP } from '@/lib/multas';
@@ -38,24 +38,31 @@ export default async function Semanas({ searchParams }: { searchParams: Promise<
 
   return (
     <>
-      <header className="barra">
-        <Link href="/">← Saldos</Link>
-        <span>Semanas</span>
-      </header>
+      <div className="titular">
+        <div>
+          <h1>Semanas</h1>
+          <p className="titular__v">Nada se borra: anular deja rastro</p>
+        </div>
+      </div>
 
-      <section className="total">
-        <p className="total__etiqueta">Multado en total</p>
-        <p className="total__cifra total__cifra--medio">{formatoCOP(total)}</p>
-        <p className="total__pie">
-          <span className="marca">{vivas.length} semanas</span>
-          <span>Nada se borra: anular deja rastro</span>
-        </p>
-      </section>
+      <div className="tarjeta">
+        <div className="cab">
+          <CalendarDays size={17} color="var(--teal)" aria-hidden />
+          <span className="cab__t" style={{ color: 'var(--teal)' }}>Multado en total</span>
+          <span className="cab__d">{vivas.length} semanas</span>
+        </div>
+        <p className="cifra"><b>{formatoCOP(total)}</b></p>
+      </div>
 
-      {ok ? <div className="aviso aviso--ok" style={{ marginTop: 14 }}>Semana {ok} registrada y publicada en Telegram.</div> : null}
+      {ok ? <div className="aviso aviso--ok">Semana {ok} registrada y publicada en Telegram.</div> : null}
 
-      {filas.length === 0 ? <p className="vacio">Todavía no hay semanas registradas.</p> : null}
-      {filas.map((s) => <Semana key={s.id} s={{ ...s, totalFmt: formatoCOP(s.total) }} />)}
+      {filas.length === 0 ? (
+        <div className="tarjeta"><p className="vacio">Todavía no hay semanas registradas.</p></div>
+      ) : null}
+
+      <div className="grupo">
+        {filas.map((s) => <Semana key={s.id} s={{ ...s, totalFmt: formatoCOP(s.total) }} />)}
+      </div>
     </>
   );
 }

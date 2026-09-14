@@ -10,11 +10,12 @@ export default async function Login() {
   const personas = (await listarPersonas()).filter((p) => !p.es_receptor && p.activo);
   return (
     <>
-      <header className="barra"><span>Ejercicio o Money</span><span>Entrar</span></header>
-      <section className="total">
-        <p className="total__etiqueta">Multas semanales</p>
-        <p className="total__cifra total__cifra--medio">Ejercicio<br />o Money</p>
-      </section>
+      <div className="titular">
+        <div>
+          <h1>Ejercicio<br />o Money</h1>
+          <p className="titular__v">Multas semanales del grupo</p>
+        </div>
+      </div>
       <FormLogin personas={personas.map((p) => p.nombre)} />
     </>
   );

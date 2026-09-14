@@ -5,8 +5,10 @@ import { formatoCOP } from '@/lib/multas';
 
 type P = { id: number; nombre: string; saldo: number };
 
-export default function FormAbono({ personas }: { personas: P[] }) {
-  const [sel, setSel] = useState<number>(personas[0]?.id ?? 0);
+export default function FormAbono({ personas, inicial }: { personas: P[]; inicial?: number }) {
+  const porDefecto =
+    inicial && personas.some((p) => p.id === inicial) ? inicial : (personas[0]?.id ?? 0);
+  const [sel, setSel] = useState<number>(porDefecto);
   const [est, abonarAcc, pend] = useActionState(abonar, null);
   const [estT, saldarAcc, pendT] = useActionState(saldarTodo, null);
   const persona = personas.find((p) => p.id === sel);
@@ -25,7 +27,7 @@ export default function FormAbono({ personas }: { personas: P[] }) {
         </select>
       </div>
 
-      <form action={abonarAcc} className="forma" style={{ padding: 0, gap: 12 }}>
+      <form action={abonarAcc} className="forma">
         <input type="hidden" name="personaId" value={sel} />
         <div className="duo">
           <div className="campo">
@@ -43,7 +45,7 @@ export default function FormAbono({ personas }: { personas: P[] }) {
         </div>
         {est?.error ? <div className="aviso aviso--malo">{est.error}</div> : null}
         {est?.ok ? <div className="aviso aviso--ok">{est.ok}</div> : null}
-        <button className="boton" disabled={pend}>{pend ? 'Guardando' : 'Registrar abono'}</button>
+        <button className="boton" disabled={pend}>{pend ? 'Guardando…' : 'Registrar abono'}</button>
       </form>
 
       {persona && persona.saldo > 0 ? (
@@ -51,8 +53,8 @@ export default function FormAbono({ personas }: { personas: P[] }) {
           <input type="hidden" name="personaId" value={sel} />
           {estT?.error ? <div className="aviso aviso--malo">{estT.error}</div> : null}
           {estT?.ok ? <div className="aviso aviso--ok">{estT.ok}</div> : null}
-          <button className="boton boton--fantasma" disabled={pendT}>
-            {pendT ? 'Saldando' : `Saldar todo · ${formatoCOP(persona.saldo)}`}
+          <button className="boton boton--sec" disabled={pendT}>
+            {pendT ? 'Saldando…' : `Saldar todo · ${formatoCOP(persona.saldo)}`}
           </button>
         </form>
       ) : null}

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { ChevronLeft } from 'lucide-react';
 import { usuarioActual } from '@/lib/auth';
 import { listarPersonas } from '@/lib/dominio';
 import { q } from '@/lib/db';
@@ -21,10 +22,12 @@ export default async function Config() {
 
   return (
     <>
-      <header className="barra">
-        <Link href="/">← Saldos</Link>
-        <span>Ajustes</span>
-      </header>
+      <div className="titular">
+        <div>
+          <Link href="/" className="volver"><ChevronLeft size={18} aria-hidden />Resumen</Link>
+          <h1>Ajustes</h1>
+        </div>
+      </div>
       <FormConfig
         personas={personas.map((p) => ({
           id: p.id, nombre: p.nombre, alias: p.alias, inicial: mapa[p.id] ?? 0,

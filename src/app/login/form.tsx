@@ -18,8 +18,8 @@ export default function FormLogin({ personas }: { personas: string[] }) {
         <input id="clave" name="clave" type="password" autoComplete="current-password" />
       </div>
       {estado?.error ? <div className="aviso aviso--malo">{estado.error}</div> : null}
-      <button className="boton" disabled={pend}>{pend ? 'Entrando' : 'Entrar'}</button>
-      <p className="tenue">Tu nombre queda en la bitácora junto a cada acción que hagas.</p>
+      <button className="boton" disabled={pend}>{pend ? 'Entrando…' : 'Entrar'}</button>
+      <p className="tenue centro">Tu nombre queda en la bitácora junto a cada acción.</p>
     </form>
   );
 }
